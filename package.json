@@ -1,0 +1,50 @@
+{
+  "name": "nativefi-cli",
+  "version": "0.2.0",
+  "description": "CLI tool for the Native liquidity platform",
+  "type": "module",
+  "bin": {
+    "native": "./bin/native.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "tsconfig.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "pnpm test"
+  },
+  "keywords": [
+    "native",
+    "defi",
+    "liquidity",
+    "swap",
+    "cli",
+    "web3",
+    "bridge"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dylanwooo/native-cli.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
