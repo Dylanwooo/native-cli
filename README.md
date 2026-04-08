@@ -1,6 +1,6 @@
 # nativefi-cli
 
-> On-chain token liquidity from your terminal. Quotes, swaps, and cross-chain bridges -- for humans and AI agents.
+> On-chain token liquidity from your terminal. Quotes, swaps, and cross-chain bridges -- for humans and AI agents. Now with MCP server for Claude, Cursor, and any AI agent.
 
 [![npm version](https://img.shields.io/npm/v/nativefi-cli.svg)](https://www.npmjs.com/package/nativefi-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -489,6 +489,202 @@ NO_COLOR=1 native quote --from ETH --to USDC --amount 1 --address 0xYourWallet
 
 ---
 
+## MCP Server
+
+nativefi-cli includes a built-in [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server. This lets AI agents like Claude, Cursor, and any MCP-compatible client discover and call DeFi tools directly -- no shell commands, no output parsing.
+
+### Setup
+
+```bash
+# Install once
+npm install -g nativefi-cli
+
+# Set your API key
+native config set api-key YOUR_API_KEY
+```
+
+### Connect to Claude Code
+
+```bash
+claude mcp add nativefi -- native-mcp
+```
+
+That's it. Claude now has 8 DeFi tools available. Ask it anything:
+
+> *"What's ETH trading at on Arbitrum?"*
+> *"Compare 10 ETH to USDC prices across all chains"*
+> *"Get me executable calldata to swap 5 ETH to USDC"*
+
+### Connect to Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "nativefi": {
+      "command": "native-mcp",
+      "env": {
+        "NATIVE_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### Connect to Cursor
+
+Add to `.cursor/mcp.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "nativefi": {
+      "command": "native-mcp",
+      "env": {
+        "NATIVE_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### Available Tools
+
+The MCP server exposes 8 tools. All return structured JSON with `data` and `_meta` fields.
+
+**Trading**
+
+| Tool | Description |
+|------|-------------|
+| `native_get_quote` | Get an indicative (non-binding) price quote for a token swap |
+| `native_get_swap_quote` | Get a firm quote with executable transaction calldata |
+| `native_get_orderbook` | Show real-time orderbook depth for trading pairs |
+| `native_list_tokens` | List all supported tokens, optionally filtered by chain |
+
+**Cross-chain Bridge**
+
+| Tool | Description |
+|------|-------------|
+| `native_bridge_quote` | Get an indicative cross-chain bridge quote |
+| `native_bridge_swap` | Get a firm cross-chain swap quote with calldata |
+| `native_bridge_status` | Check the status of a bridge transaction |
+| `native_bridge_history` | View bridge transaction history for a wallet |
+
+### Tool Parameters
+
+**native_get_quote**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `from` | string | Yes | Source token symbol (e.g. ETH) or address (0x...) |
+| `to` | string | Yes | Destination token symbol (e.g. USDC) or address |
+| `amount` | string | Yes | Amount of source token (e.g. "1" for 1 ETH) |
+| `address` | string | Yes | Wallet address (required by API) |
+| `chain` | string | No | Chain: ethereum, bsc, arbitrum, base |
+| `src_chain` | string | No | Source chain (for cross-chain quotes) |
+| `dst_chain` | string | No | Destination chain (for cross-chain quotes) |
+| `multihop` | boolean | No | Allow multihop routing for better rates |
+
+**native_get_swap_quote**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `from` | string | Yes | Source token symbol or address |
+| `to` | string | Yes | Destination token symbol or address |
+| `amount` | string | Yes | Amount of source token |
+| `address` | string | Yes | Sender/signer wallet address |
+| `chain` | string | No | Chain name |
+| `slippage` | number | No | Slippage tolerance in percent (e.g. 0.5) |
+
+**native_get_orderbook**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `chain` | string | No | Chain to query |
+| `pair` | string | No | Filter by trading pair (e.g. ETH/USDC) |
+
+**native_list_tokens**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `chain` | string | No | Filter by chain |
+
+**native_bridge_quote**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `from` | string | Yes | Source token symbol or address |
+| `to` | string | Yes | Destination token symbol or address |
+| `amount` | string | Yes | Amount of source token |
+| `src_chain` | string | Yes | Source chain |
+| `dst_chain` | string | Yes | Destination chain |
+
+**native_bridge_swap**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `from` | string | Yes | Source token symbol or address |
+| `to` | string | Yes | Destination token symbol or address |
+| `amount` | string | Yes | Amount of source token |
+| `src_chain` | string | Yes | Source chain |
+| `dst_chain` | string | Yes | Destination chain |
+| `address` | string | Yes | Sender wallet address |
+| `refund_to` | string | Yes | Refund address if bridge fails |
+| `slippage` | number | No | Slippage tolerance in percent |
+
+**native_bridge_status**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `bridge_quote_id` | string | Yes | Bridge quote ID from bridge swap |
+
+**native_bridge_history**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Wallet address |
+| `page_size` | number | No | Results per page (default: 20) |
+| `page_index` | number | No | Page index (default: 0) |
+
+### Programmatic MCP Client
+
+Use the MCP SDK to connect from your own agent:
+
+```typescript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+const transport = new StdioClientTransport({
+  command: 'native-mcp',
+  env: { NATIVE_API_KEY: 'your-key' },
+});
+
+const client = new Client({ name: 'my-agent', version: '1.0' });
+await client.connect(transport);
+
+// Get a quote
+const result = await client.callTool('native_get_quote', {
+  from: 'ETH', to: 'USDC', amount: '10',
+  address: '0xYourWallet', chain: 'arbitrum',
+});
+console.log(result.content[0].text); // structured JSON
+```
+
+### MCP vs CLI
+
+| | CLI (`native quote ...`) | MCP (`native_get_quote`) |
+|---|---|---|
+| Discovery | Manual -- read docs | Automatic -- agent queries `tools/list` |
+| Parameters | Free-text flags | Typed JSON schema with validation |
+| Output | stdout text or JSON | Structured JSON content blocks |
+| Integration | `subprocess.run()` | Native function call |
+| Best for | Humans, shell scripts | AI agents, automated workflows |
+
+Both the CLI and MCP server share the same underlying modules (API client, cache, rate limiter, config). They are two interfaces to the same engine.
+
+---
+
 ## Architecture
 
 ### Cache
@@ -622,10 +818,23 @@ pnpm lint
 
 ```
 native-cli/
-  bin/           # CLI entry point
-  src/           # TypeScript source
-  package.json
-  tsconfig.json
+  bin/
+    native.js          # CLI entry point
+    native-mcp.js      # MCP server entry point
+  src/
+    index.ts           # CLI bootstrap (Commander)
+    mcp-server.ts      # MCP server bootstrap (stdio transport)
+    types.ts           # Shared TypeScript types and constants
+    commands/          # CLI command handlers
+    lib/               # Shared modules (API client, cache, rate limiter, config, errors)
+    mcp/
+      register-tools.ts
+      helpers.ts
+      tools/           # MCP tool handlers (quote, swap, orderbook, tokens, bridge)
+  tests/
+    commands/          # CLI command tests
+    lib/               # Lib module tests
+    mcp/tools/         # MCP tool tests
 ```
 
 ---
