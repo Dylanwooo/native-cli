@@ -12,7 +12,7 @@ export function main(): void {
   program
     .name('native')
     .description('CLI tool for the Native liquidity platform')
-    .version('0.3.0')
+    .version('0.3.1')
     .option('--json', 'Output as JSON')
     .option('--no-color', 'Disable colored output')
     .option('--skip-cache', 'Skip cache for this request')
