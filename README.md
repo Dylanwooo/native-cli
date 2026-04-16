@@ -509,7 +509,7 @@ native config set api-key YOUR_API_KEY
 claude mcp add nativefi -- native-mcp
 ```
 
-That's it. Claude now has 8 DeFi tools available. Ask it anything:
+That's it. Claude now has 10 DeFi tools available (3 work without an API key). Ask it anything:
 
 > *"What's ETH trading at on Arbitrum?"*
 > *"Compare 10 ETH to USDC prices across all chains"*
@@ -551,18 +551,25 @@ Add to `.cursor/mcp.json` in your project:
 
 ### Available Tools
 
-The MCP server exposes 8 tools. All return structured JSON with `data` and `_meta` fields.
+The MCP server exposes 10 tools. Tools marked with **No auth** work without an API key -- agents can explore docs, browse examples, and discover tokens before configuring credentials.
 
-**Trading**
+**Documentation & Discovery (no API key required)**
+
+| Tool | Description |
+|------|-------------|
+| `native_search_docs` | Search Native protocol documentation (guides, references, setup) |
+| `native_get_examples` | Browse production-ready code examples (TypeScript, Python, bash, JSON) |
+| `native_list_tokens` | List all supported tokens, optionally filtered by chain |
+
+**Trading (API key required)**
 
 | Tool | Description |
 |------|-------------|
 | `native_get_quote` | Get an indicative (non-binding) price quote for a token swap |
 | `native_get_swap_quote` | Get a firm quote with executable transaction calldata |
 | `native_get_orderbook` | Show real-time orderbook depth for trading pairs |
-| `native_list_tokens` | List all supported tokens, optionally filtered by chain |
 
-**Cross-chain Bridge**
+**Cross-chain Bridge (API key required)**
 
 | Tool | Description |
 |------|-------------|
@@ -572,6 +579,21 @@ The MCP server exposes 8 tools. All return structured JSON with `data` and `_met
 | `native_bridge_history` | View bridge transaction history for a wallet |
 
 ### Tool Parameters
+
+**native_search_docs** *(no API key required)*
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Search query (e.g. "how to bridge", "error codes", "authentication") |
+| `category` | string | No | Filter by category: getting-started, swaps, bridges, data, reference, ai-integration |
+
+**native_get_examples** *(no API key required)*
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | No | Search query (e.g. "swap", "bridge", "mcp setup") |
+| `language` | string | No | Filter by language: typescript, python, bash, json |
+| `tag` | string | No | Filter by tag: swap, bridge, orderbook, mcp, cli, quote, setup |
 
 **native_get_quote**
 
@@ -781,7 +803,7 @@ The swap was flagged by on-chain risk checks. This is not retryable. Review the 
 ### Setup
 
 ```bash
-git clone https://github.com/nativeorg/native-cli.git
+git clone https://github.com/Dylanwooo/native-cli.git
 cd native-cli
 pnpm install
 ```
@@ -830,7 +852,8 @@ native-cli/
     mcp/
       register-tools.ts
       helpers.ts
-      tools/           # MCP tool handlers (quote, swap, orderbook, tokens, bridge)
+      data/            # Embedded docs and code examples (no API key needed)
+      tools/           # MCP tool handlers (docs, quote, swap, orderbook, tokens, bridge)
   tests/
     commands/          # CLI command tests
     lib/               # Lib module tests

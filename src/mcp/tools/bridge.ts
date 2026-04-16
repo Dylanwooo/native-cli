@@ -23,6 +23,7 @@ export function registerBridgeTools(server: McpServer): void {
       src_chain: z.string().describe('Source chain: ethereum, bsc, arbitrum, base'),
       dst_chain: z.string().describe('Destination chain: ethereum, bsc, arbitrum, base'),
     },
+    { readOnlyHint: true },
     async ({ from, to, amount, src_chain, dst_chain }) => {
       try {
         const params: Record<string, string> = {
@@ -61,6 +62,7 @@ export function registerBridgeTools(server: McpServer): void {
       refund_to: z.string().describe('Refund address if bridge fails (0x... format)'),
       slippage: z.number().optional().describe('Slippage tolerance in percent (e.g. 0.5)'),
     },
+    { destructiveHint: true },
     async ({ from, to, amount, src_chain, dst_chain, address, refund_to, slippage }) => {
       try {
         const config = resolveConfig({ slippage });
@@ -97,6 +99,7 @@ export function registerBridgeTools(server: McpServer): void {
     {
       bridge_quote_id: z.string().describe('Bridge quote ID returned from bridge swap'),
     },
+    { readOnlyHint: true },
     async ({ bridge_quote_id }) => {
       try {
         const response = await apiRequest<BridgeTxStatusResponse>(
@@ -122,6 +125,7 @@ export function registerBridgeTools(server: McpServer): void {
       page_size: z.number().optional().describe('Number of results per page (default: 20)'),
       page_index: z.number().optional().describe('Page index (default: 0)'),
     },
+    { readOnlyHint: true },
     async ({ address, page_size, page_index }) => {
       try {
         const params: Record<string, string> = {

@@ -1,0 +1,560 @@
+# Native Protocol
+
+> Programmable liquidity protocol for token swaps, cross-chain bridges, and orderbook data across Ethereum, BSC, Arbitrum, and Base.
+
+## Supported Chains
+
+- Ethereum (chain ID: 1)
+- BNB Smart Chain (chain ID: 56)
+- Arbitrum One (chain ID: 42161)
+- Base (chain ID: 8453)
+
+## MCP Tools
+
+### No API key required
+- `native_search_docs`: Search protocol documentation
+- `native_get_examples`: Browse code examples (TypeScript, Python, bash, JSON)
+- `native_list_tokens`: List supported tokens by chain
+
+### API key required
+- `native_get_quote`: Indicative swap price quote
+- `native_get_swap_quote`: Firm quote with transaction calldata
+- `native_get_orderbook`: Real-time orderbook depth
+- `native_bridge_quote`: Cross-chain bridge quote
+- `native_bridge_swap`: Cross-chain bridge with calldata
+- `native_bridge_status`: Bridge transaction status
+- `native_bridge_history`: Bridge transaction history by wallet
+
+---
+
+## Full Documentation
+
+### What is Native?
+
+Native is a programmable liquidity protocol that aggregates on-chain and off-chain liquidity
+for token swaps and cross-chain bridges. It provides:
+
+- **Token Swaps**: Best-rate execution across multiple liquidity sources
+- **Cross-chain Bridges**: Transfer tokens between supported chains
+- **Orderbook Data**: Real-time liquidity depth for trading pairs
+- **Multi-chain Support**: Ethereum, BSC, Arbitrum, Base
+
+Native exposes its capabilities through a REST API, a CLI tool (`nativefi-cli`),
+and an MCP server for AI agent integration.
+
+### Authentication
+
+Most Native API endpoints require an API key. You can configure it in three ways
+(highest priority first):
+
+1. **CLI flag**: `native --api-key YOUR_KEY quote ...`
+2. **Environment variable**: `export NATIVE_API_KEY=YOUR_KEY`
+3. **Config file**: `native config set api-key YOUR_KEY`
+
+The API key is sent as an `apiKey` HTTP header.
+
+**No-auth endpoints**: The `widget-tokens` endpoint (token listing) does not require
+an API key. All other endpoints (quotes, swaps, bridges, orderbook) require authentication.
+
+**Security**: The config file is stored at `~/.config/native/config.json` with 0600
+permissions (owner-only read/write).
+
+### Supported Chains
+
+Native currently supports 4 EVM chains:
+
+| Chain      | Chain ID | Native Token |
+|------------|----------|--------------|
+| ethereum   | 1        | ETH          |
+| bsc        | 56       | BNB          |
+| arbitrum   | 42161    | ETH          |
+| base       | 8453     | ETH          |
+
+Use chain names (lowercase) in CLI commands and MCP tool parameters.
+Default chain is `ethereum` and can be changed via `native config set default-chain <chain>`.
+
+**Native token addresses** (used for ETH/BNB swaps):
+- `0x0000000000000000000000000000000000000000`
+- `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE`
+
+### Token Swap Quotes
+
+Native provides two types of quotes:
+
+#### Indicative Quote (non-binding)
+Returns a price estimate without executable transaction data. Use for price display and comparison.
+
+- **MCP tool**: `native_get_quote`
+- **CLI**: `native quote --from ETH --to USDC --amount 1 --address 0x...`
+- **API**: `GET /indicative-quote?from_address=...&token_in=...&token_out=...&amount=...&src_chain=...&dst_chain=...`
+- **Cached**: 5 seconds
+
+#### Firm Quote (binding, with calldata)
+Returns executable transaction data (target, calldata, value) ready to be signed and submitted.
+
+- **MCP tool**: `native_get_swap_quote`
+- **CLI**: `native swap --from ETH --to USDC --amount 1 --address 0x...`
+- **API**: `GET /firm-quote?from_address=...&token_in=...&token_out=...&amount=...&slippage=...`
+- **Never cached** (time-sensitive)
+
+Both support symbol names (ETH, USDC) or contract addresses (0x...).
+Slippage defaults to 0.5% and is configurable.
+
+### Cross-chain Bridges
+
+Bridge tokens between supported chains (ethereum, bsc, arbitrum, base).
+
+#### Workflow
+1. **Get a quote**: `native_bridge_quote` -> estimated output amount and time
+2. **Execute the bridge**: `native_bridge_swap` -> transaction calldata to sign
+3. **Track status**: `native_bridge_status` -> poll until completed
+4. **View history**: `native_bridge_history` -> past transactions for a wallet
+
+#### Key Parameters
+- `src_chain` / `dst_chain`: Source and destination chains
+- `token_in` / `token_out`: Token symbols or addresses
+- `refund_to`: Address to receive funds if bridge fails (required for firm quotes)
+- `bridge_quote_id`: Returned by bridge swap, used for status tracking
+
+#### CLI Examples
+```bash
+native bridge quote --from ETH --to USDC --amount 1 --src-chain ethereum --dst-chain arbitrum
+native bridge swap --from ETH --to USDC --amount 1 --src-chain ethereum --dst-chain base --address 0x... --refund-to 0x...
+native bridge status --id <bridge_quote_id>
+native bridge history --address 0x...
+```
+
+### Orderbook Data
+
+Query real-time liquidity depth for trading pairs.
+
+- **MCP tool**: `native_get_orderbook`
+- **CLI**: `native orderbook --pair ETH/USDC`
+- **Cached**: 3 seconds (highly time-sensitive)
+
+#### Response Format
+Returns bid/ask levels as `[quantity, price]` arrays:
+```json
+{
+  "base_symbol": "ETH",
+  "quote_symbol": "USDC",
+  "levels": [[0.5, 3200.50], [1.0, 3200.00], [2.0, 3199.50]]
+}
+```
+
+#### Parameters
+- `pair`: Trading pair in `BASE/QUOTE` format (e.g. ETH/USDC)
+- `chain`: Chain to query (defaults to configured chain)
+
+### CLI Configuration
+
+Configuration is stored at `~/.config/native/config.json`.
+
+#### Commands
+```bash
+native config set <key> <value>   # Set a config value
+native config get <key>            # Get a config value
+native config list                 # List all config values
+native config path                 # Show config file path
+```
+
+#### Available Settings
+| Key                 | Default                                      | Description                  |
+|---------------------|----------------------------------------------|------------------------------|
+| api-key             | --                                           | API key for authentication   |
+| api-url             | https://v2.api.native.org/swap-api-v2/v1     | API base URL                 |
+| default-chain       | ethereum                                     | Default chain for commands   |
+| slippage            | 0.5                                          | Default slippage (%)         |
+| rate-limit-rps      | 10                                           | Requests per second          |
+| rate-limit-burst    | 20                                           | Burst capacity               |
+| rate-limit-strategy | queue                                        | queue / reject / degrade     |
+| request-timeout     | 30000                                        | Request timeout (ms)         |
+
+#### Priority Order
+CLI flags > Environment variables > Config file > Defaults
+
+### Error Codes
+
+#### API Error Codes
+| Code   | Meaning                  | Suggestion                                    |
+|--------|--------------------------|-----------------------------------------------|
+| 201005 | Rate limited             | Wait and retry, or reduce request frequency   |
+| 101010 | Insufficient liquidity   | Try a smaller amount or different pair         |
+| 101008 | Risk check rejected      | Token may be flagged; verify token address     |
+| 101007 | Invalid token            | Check token address or symbol spelling         |
+| 101006 | Chain not supported      | Use: ethereum, bsc, arbitrum, base             |
+
+#### CLI Exit Codes
+| Code | Meaning              |
+|------|----------------------|
+| 0    | Success              |
+| 1    | General error        |
+| 2    | Usage/config error   |
+| 10   | Insufficient liquidity |
+| 11   | Rate limited         |
+| 12   | Risk rejected        |
+
+#### Common Issues
+- **"No API key configured"**: Run `native config set api-key YOUR_KEY`
+- **Network timeout**: Check connectivity, or increase timeout: `native config set request-timeout 60000`
+- **Stale data**: Use `--skip-cache` flag to bypass cache
+
+### MCP Server Setup
+
+The Native MCP server exposes DeFi tools to AI agents via the Model Context Protocol.
+
+#### Installation
+
+##### Claude Desktop
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "nativefi": {
+      "command": "npx",
+      "args": ["-y", "nativefi-cli", "mcp"],
+      "env": { "NATIVE_API_KEY": "your-api-key" }
+    }
+  }
+}
+```
+
+##### Claude Code
+```bash
+claude mcp add nativefi -- npx -y nativefi-cli mcp
+```
+
+##### Cursor
+Add to `.cursor/mcp.json`:
+```json
+{
+  "mcpServers": {
+    "nativefi": {
+      "command": "npx",
+      "args": ["-y", "nativefi-cli", "mcp"],
+      "env": { "NATIVE_API_KEY": "your-api-key" }
+    }
+  }
+}
+```
+
+#### Available Tools (10 total)
+**No auth required**: `native_search_docs`, `native_get_examples`, `native_list_tokens`
+**Auth required**: `native_get_quote`, `native_get_swap_quote`, `native_get_orderbook`,
+`native_bridge_quote`, `native_bridge_swap`, `native_bridge_status`, `native_bridge_history`
+
+### Caching
+
+Native CLI uses file-based caching at `~/.cache/native/` to reduce API calls
+and improve response times.
+
+#### TTLs by Endpoint
+| Endpoint Type          | TTL       |
+|------------------------|-----------|
+| tokens                 | 1 hour    |
+| orderbook              | 3 seconds |
+| indicative_quote       | 5 seconds |
+| bridge_indicative_quote| 5 seconds |
+| bridge_tx_status       | 10 seconds|
+| firm_quote             | Never (0) |
+| bridge_firm_quote      | Never (0) |
+
+#### Cache Control
+- `--skip-cache`: Bypass cache entirely
+- `--max-age <ms>`: Custom max age for cached data
+- `--stale-ok`: Accept expired cache entries (useful during rate limiting)
+
+#### How It Works
+- Cache keys: SHA256 hash of endpoint + sorted query parameters
+- Metadata: Every response includes `_meta.source` ("api" or "cache"),
+  `_meta.age_ms`, and `_meta.fresh` for transparency
+
+---
+
+## Code Examples
+
+### Get a swap quote (TypeScript)
+
+Fetch an indicative price quote for a token swap using the Native API directly.
+
+```typescript
+import fetch from 'node-fetch';
+
+const API_URL = 'https://v2.api.native.org/swap-api-v2/v1';
+const API_KEY = process.env.NATIVE_API_KEY!;
+
+async function getQuote() {
+  const params = new URLSearchParams({
+    from_address: '0xYourWalletAddress',
+    src_chain: 'ethereum',
+    dst_chain: 'ethereum',
+    token_in: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // ETH
+    token_out: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+    amount: '1000000000000000000', // 1 ETH in wei
+  });
+
+  const res = await fetch(`${API_URL}/indicative-quote?${params}`, {
+    headers: { apiKey: API_KEY },
+  });
+
+  const data = await res.json();
+  console.log('Quote:', data);
+  // data.buyerTokenAmount = USDC amount you'll receive
+  // data.price = exchange rate
+}
+
+getQuote();
+```
+
+### Execute a swap with calldata (TypeScript)
+
+Get a firm quote with transaction calldata, then sign and send using ethers.js.
+
+```typescript
+import { ethers } from 'ethers';
+import fetch from 'node-fetch';
+
+const API_URL = 'https://v2.api.native.org/swap-api-v2/v1';
+const API_KEY = process.env.NATIVE_API_KEY!;
+
+async function executeSwap() {
+  const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+  const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+
+  // 1. Get firm quote with calldata
+  const params = new URLSearchParams({
+    from_address: wallet.address,
+    src_chain: 'ethereum',
+    dst_chain: 'ethereum',
+    token_in: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+    token_out: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    amount: '1000000000000000000',
+    slippage: '0.5',
+    version: '4',
+  });
+
+  const res = await fetch(`${API_URL}/firm-quote?${params}`, {
+    headers: { apiKey: API_KEY },
+  });
+  const quote = await res.json();
+
+  // 2. Sign and send the transaction
+  const tx = await wallet.sendTransaction({
+    to: quote.txRequest.target,
+    data: quote.txRequest.calldata,
+    value: quote.txRequest.value,
+    gasLimit: quote.txRequest.gas,
+  });
+
+  console.log('Tx hash:', tx.hash);
+  const receipt = await tx.wait();
+  console.log('Confirmed in block:', receipt?.blockNumber);
+}
+
+executeSwap();
+```
+
+### Cross-chain bridge flow (TypeScript)
+
+Complete bridge workflow: quote -> swap -> poll status until complete.
+
+```typescript
+import fetch from 'node-fetch';
+
+const API_URL = 'https://v2.api.native.org/swap-api-v2/v1';
+const API_KEY = process.env.NATIVE_API_KEY!;
+const WALLET = '0xYourWalletAddress';
+
+async function api(endpoint: string, params: Record<string, string>) {
+  const qs = new URLSearchParams(params);
+  const res = await fetch(`${API_URL}/${endpoint}?${qs}`, {
+    headers: { apiKey: API_KEY },
+  });
+  return res.json();
+}
+
+async function bridgeETHtoBase() {
+  // 1. Get indicative quote
+  const quote = await api('bridge/indicative-quote', {
+    src_chain: 'ethereum',
+    dst_chain: 'base',
+    token_in: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+    token_out: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+    amount: '1000000000000000000',
+  });
+  console.log('Bridge quote:', quote);
+
+  // 2. Get firm quote with calldata
+  const swap = await api('bridge/firm-quote', {
+    from_address: WALLET,
+    refund_to: WALLET,
+    src_chain: 'ethereum',
+    dst_chain: 'base',
+    token_in: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+    token_out: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+    amount: '1000000000000000000',
+    slippage: '0.5',
+  });
+
+  // 3. Sign and send swap.txRequest (see execute-swap example)
+  // ...
+
+  // 4. Poll status
+  const bridgeId = swap.bridge_quote_id;
+  let status = 'pending';
+  while (status !== 'completed' && status !== 'failed') {
+    await new Promise(r => setTimeout(r, 10000));
+    const result = await api('bridge/tx-status', { bridge_quote_id: bridgeId });
+    status = result.status;
+    console.log('Bridge status:', status);
+  }
+}
+
+bridgeETHtoBase();
+```
+
+### Query orderbook depth (TypeScript)
+
+Fetch real-time orderbook liquidity for a trading pair.
+
+```typescript
+import fetch from 'node-fetch';
+
+const API_URL = 'https://v2.api.native.org/swap-api-v2/v1';
+const API_KEY = process.env.NATIVE_API_KEY!;
+
+async function getOrderbook() {
+  const params = new URLSearchParams({
+    chain: 'ethereum',
+    pair: 'ETH/USDC',
+  });
+
+  const res = await fetch(`${API_URL}/orderbook?${params}`, {
+    headers: { apiKey: API_KEY },
+  });
+  const data = await res.json();
+
+  // Each level is [quantity, price]
+  for (const entry of data) {
+    console.log(`${entry.base_symbol}/${entry.quote_symbol} (${entry.side})`);
+    for (const [qty, price] of entry.levels.slice(0, 5)) {
+      console.log(`  ${qty} @ ${price}`);
+    }
+  }
+}
+
+getOrderbook();
+```
+
+### CLI quickstart
+
+Common CLI commands to get started with Native.
+
+```bash
+# Install globally
+npm install -g nativefi-cli
+
+# Configure API key
+native config set api-key YOUR_API_KEY
+
+# Set default chain (optional, defaults to ethereum)
+native config set default-chain arbitrum
+
+# Get a swap quote
+native quote --from ETH --to USDC --amount 1 --address 0xYourWallet
+
+# Get a firm quote with calldata
+native swap --from ETH --to USDC --amount 1 --address 0xYourWallet
+
+# Query orderbook
+native orderbook --pair ETH/USDC
+
+# List all tokens on a chain
+native tokens --chain ethereum
+
+# Cross-chain bridge
+native bridge quote --from ETH --to ETH --amount 1 \
+  --src-chain ethereum --dst-chain base
+
+# JSON output (for scripting)
+native quote --from ETH --to USDC --amount 1 --address 0x... --json
+```
+
+### MCP setup for Claude Desktop
+
+Configure Native MCP server in Claude Desktop for AI-powered DeFi.
+
+```json
+// Add to: ~/Library/Application Support/Claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "nativefi": {
+      "command": "npx",
+      "args": ["-y", "nativefi-cli", "mcp"],
+      "env": {
+        "NATIVE_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+
+// After restart, Claude can:
+// - Search Native docs (no key needed)
+// - Browse code examples (no key needed)
+// - List supported tokens (no key needed)
+// - Get swap quotes (key required)
+// - Execute swaps with calldata (key required)
+// - Bridge tokens cross-chain (key required)
+// - Query orderbook depth (key required)
+```
+
+### MCP setup for Cursor
+
+Configure Native MCP server in Cursor IDE.
+
+```json
+// Add to: .cursor/mcp.json in your project root
+{
+  "mcpServers": {
+    "nativefi": {
+      "command": "npx",
+      "args": ["-y", "nativefi-cli", "mcp"],
+      "env": {
+        "NATIVE_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+### Get a swap quote (Python)
+
+Fetch an indicative swap quote using Python requests.
+
+```python
+import os
+import requests
+
+API_URL = "https://v2.api.native.org/swap-api-v2/v1"
+API_KEY = os.environ["NATIVE_API_KEY"]
+
+def get_quote():
+    resp = requests.get(
+        f"{API_URL}/indicative-quote",
+        headers={"apiKey": API_KEY},
+        params={
+            "from_address": "0xYourWalletAddress",
+            "src_chain": "ethereum",
+            "dst_chain": "ethereum",
+            "token_in": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",  # ETH
+            "token_out": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",  # USDC
+            "amount": "1000000000000000000",  # 1 ETH in wei
+        },
+    )
+    data = resp.json()
+    print(f"Price: {data.get('price')}")
+    print(f"You receive: {data.get('buyerTokenAmount')} USDC")
+    return data
+
+get_quote()
+```

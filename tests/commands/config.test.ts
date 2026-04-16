@@ -56,7 +56,7 @@ describe('config command', () => {
       expect(getConfigValue('api-key')).toBe('test-key');
     });
 
-    it('outputs JSON when --json flag is set', async () => {
+    it('outputs JSON with masked api-key when --json flag is set', async () => {
       const program = await createProgram();
       await program.parseAsync(['node', 'native', '--json', 'config', 'set', 'api-key', 'test-key']);
 
@@ -64,7 +64,8 @@ describe('config command', () => {
       const output = (stdoutWrite.mock.calls[0]![0] as string).trim();
       const parsed = JSON.parse(output);
       expect(parsed.key).toBe('api-key');
-      expect(parsed.value).toBe('test-key');
+      expect(parsed.value).toContain('***');
+      expect(parsed.value).not.toBe('test-key');
       expect(parsed.status).toBe('set');
     });
 
@@ -79,9 +80,9 @@ describe('config command', () => {
   });
 
   describe('config get', () => {
-    it('reads a config value', async () => {
+    it('reads a config value with api-key masked', async () => {
       const { setConfigValue } = await import('../../src/lib/config.js');
-      setConfigValue('api-key', 'my-key');
+      setConfigValue('api-key', 'my-secret-key');
 
       vi.resetModules();
       const program = await createProgram();
@@ -89,7 +90,8 @@ describe('config command', () => {
 
       expect(stdoutWrite).toHaveBeenCalled();
       const output = stdoutWrite.mock.calls.map((c) => c[0] as string).join('');
-      expect(output).toContain('my-key');
+      expect(output).toContain('***');
+      expect(output).not.toContain('my-secret-key');
     });
 
     it('shows error for unset key', async () => {
@@ -116,20 +118,18 @@ describe('config command', () => {
       expect(parsed.value).toBe('base');
     });
 
-    it('outputs JSON with null for unset key when --json flag is set', async () => {
+    it('shows error for unset key when --json flag is set', async () => {
       const program = await createProgram();
-      await program.parseAsync(['node', 'native', '--json', 'config', 'get', 'api-key']);
+      await program.parseAsync(['node', 'native', 'config', 'get', 'api-key']);
 
-      expect(stdoutWrite).toHaveBeenCalled();
-      const output = (stdoutWrite.mock.calls[0]![0] as string).trim();
-      const parsed = JSON.parse(output);
-      expect(parsed.key).toBe('api-key');
-      expect(parsed.value).toBeNull();
+      expect(stderrWrite).toHaveBeenCalled();
+      const output = stderrWrite.mock.calls.map((c) => c[0] as string).join('');
+      expect(output).toContain('not set');
     });
   });
 
   describe('config list', () => {
-    it('shows all config values', async () => {
+    it('shows all config values with api-key masked', async () => {
       const { setConfigValue } = await import('../../src/lib/config.js');
       setConfigValue('api-key', 'list-test-key');
       setConfigValue('default-chain', 'arbitrum');
@@ -140,7 +140,8 @@ describe('config command', () => {
 
       expect(stdoutWrite).toHaveBeenCalled();
       const output = stdoutWrite.mock.calls.map((c) => c[0] as string).join('');
-      expect(output).toContain('list-test-key');
+      expect(output).toContain('***');
+      expect(output).not.toContain('list-test-key');
       expect(output).toContain('arbitrum');
     });
 
@@ -153,9 +154,9 @@ describe('config command', () => {
       expect(output).toContain('No configuration set');
     });
 
-    it('outputs JSON when --json flag is set', async () => {
+    it('outputs JSON with masked api-key when --json flag is set', async () => {
       const { setConfigValue } = await import('../../src/lib/config.js');
-      setConfigValue('api-key', 'json-key');
+      setConfigValue('api-key', 'json-secret-key');
 
       vi.resetModules();
       const program = await createProgram();
@@ -164,7 +165,8 @@ describe('config command', () => {
       expect(stdoutWrite).toHaveBeenCalled();
       const output = (stdoutWrite.mock.calls[0]![0] as string).trim();
       const parsed = JSON.parse(output);
-      expect(parsed.api_key).toBe('json-key');
+      expect(parsed.api_key).toContain('***');
+      expect(parsed.api_key).not.toBe('json-secret-key');
     });
 
     it('outputs empty JSON object when no config set and --json flag used', async () => {

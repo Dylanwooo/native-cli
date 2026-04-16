@@ -12,6 +12,7 @@ export function registerOrderbookTool(server: McpServer): void {
       chain: z.string().optional().describe('Chain to query: ethereum, bsc, arbitrum, base'),
       pair: z.string().optional().describe('Filter by trading pair (e.g. ETH/USDC)'),
     },
+    { readOnlyHint: true },
     async ({ chain, pair }) => {
       try {
         const resolvedChain = resolveChain(chain);

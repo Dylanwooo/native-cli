@@ -11,6 +11,7 @@ export function registerTokensTool(server: McpServer): void {
     {
       chain: z.string().optional().describe('Filter by chain: ethereum, bsc, arbitrum, base'),
     },
+    { readOnlyHint: true },
     async ({ chain }) => {
       try {
         const resolvedChain = chain ?? '';

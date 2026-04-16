@@ -1,0 +1,53 @@
+# Native Protocol
+
+> Programmable liquidity protocol for token swaps, cross-chain bridges, and orderbook data across Ethereum, BSC, Arbitrum, and Base.
+
+## Docs
+
+- [README](https://github.com/Dylanwooo/native-cli#readme): Full documentation — install, configure, usage, architecture
+- [Quick Start](https://github.com/Dylanwooo/native-cli#quick-start): Install, configure API key, first quote
+- [Configuration](https://github.com/Dylanwooo/native-cli#configuration): CLI config, environment variables, precedence rules
+- [Usage](https://github.com/Dylanwooo/native-cli#usage): Token swaps, orderbook, cross-chain bridges
+- [For AI Agents](https://github.com/Dylanwooo/native-cli#for-ai-agents): JSON output, exit codes, structured metadata
+- [MCP Server](https://github.com/Dylanwooo/native-cli#mcp-server): Setup for Claude, Cursor, and MCP-compatible clients
+- [Error Handling](https://github.com/Dylanwooo/native-cli#error-handling): API error codes, CLI exit codes, troubleshooting
+
+## API
+
+Base URL: `https://v2.api.native.org/swap-api-v2/v1`
+
+- `GET /indicative-quote` — non-binding price quote
+- `GET /firm-quote` — binding quote with transaction calldata
+- `GET /orderbook` — liquidity depth by pair
+- `GET /widget-tokens` — supported token list (no auth required)
+- `GET /bridge/indicative-quote` — cross-chain price estimate
+- `GET /bridge/firm-quote` — cross-chain swap calldata
+- `GET /bridge/tx-status` — bridge transaction tracking
+- `GET /bridge/tx-history` — bridge transaction history by wallet
+
+## npm Package
+
+- [nativefi-cli on npm](https://www.npmjs.com/package/nativefi-cli): `npm install -g nativefi-cli`
+
+## Supported Chains
+
+- Ethereum (chain ID: 1)
+- BNB Smart Chain (chain ID: 56)
+- Arbitrum One (chain ID: 42161)
+- Base (chain ID: 8453)
+
+## MCP Tools
+
+### No API key required
+- `native_search_docs`: Search protocol documentation
+- `native_get_examples`: Browse code examples (TypeScript, Python, bash, JSON)
+- `native_list_tokens`: List supported tokens by chain
+
+### API key required
+- `native_get_quote`: Indicative swap price quote
+- `native_get_swap_quote`: Firm quote with transaction calldata
+- `native_get_orderbook`: Real-time orderbook depth
+- `native_bridge_quote`: Cross-chain bridge quote
+- `native_bridge_swap`: Cross-chain bridge with calldata
+- `native_bridge_status`: Bridge transaction status
+- `native_bridge_history`: Bridge transaction history by wallet

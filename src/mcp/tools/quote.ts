@@ -19,6 +19,7 @@ export function registerQuoteTool(server: McpServer): void {
       dst_chain: z.string().optional().describe('Destination chain (for cross-chain quotes)'),
       multihop: z.boolean().optional().describe('Allow multihop routing for better rates'),
     },
+    { readOnlyHint: true },
     async ({ from, to, amount, address, chain, src_chain, dst_chain, multihop }) => {
       try {
         const defaultChain = resolveChain(chain);

@@ -9,6 +9,15 @@ import {
 } from '../lib/config.js';
 import { printJson, printKeyValue, printError, printWarning, printSuccess, isJsonMode } from '../lib/output.js';
 
+const SENSITIVE_KEYS = new Set(['api_key', 'api-key']);
+
+function maskValue(key: string, value: string | number | undefined): string | number | undefined {
+  if (value === undefined) return undefined;
+  const s = String(value);
+  if (!SENSITIVE_KEYS.has(key) || s.length <= 4) return value;
+  return s.slice(0, 2) + '***...' + s.slice(-4);
+}
+
 export function registerConfigCommand(program: Command): void {
   const config = program
     .command('config')
@@ -31,10 +40,11 @@ export function registerConfigCommand(program: Command): void {
         process.exitCode = 2;
         return;
       }
+      const display = maskValue(key, value) ?? value;
       if (isJsonMode(program.opts().json as boolean | undefined)) {
-        printJson({ key, value, status: 'set' });
+        printJson({ key, value: display, status: 'set' });
       } else {
-        await printKeyValue([[key, value]]);
+        await printKeyValue([[key, display]]);
       }
     });
 
@@ -122,12 +132,15 @@ export function registerConfigCommand(program: Command): void {
     .description('Get a config value')
     .action(async (key: string) => {
       const value = getConfigValue(key);
-      if (isJsonMode(program.opts().json as boolean | undefined)) {
-        printJson({ key, value: value ?? null });
-      } else if (value !== undefined) {
-        await printKeyValue([[key, value]]);
-      } else {
+      if (value === undefined) {
         await printError(`Key not set: ${key}`);
+        return;
+      }
+      const display = maskValue(key, value) ?? value;
+      if (isJsonMode(program.opts().json as boolean | undefined)) {
+        printJson({ key, value: display });
+      } else {
+        await printKeyValue([[key, display]]);
       }
     });
 
@@ -136,10 +149,13 @@ export function registerConfigCommand(program: Command): void {
     .description('List all config values')
     .action(async () => {
       const all = listConfig();
+      const masked = Object.fromEntries(
+        Object.entries(all).map(([k, v]) => [k, maskValue(k, v as string | number) ?? v])
+      );
       if (isJsonMode(program.opts().json as boolean | undefined)) {
-        printJson(all);
+        printJson(masked);
       } else {
-        const entries = Object.entries(all);
+        const entries = Object.entries(masked);
         if (entries.length === 0) {
           process.stderr.write('No configuration set. Using defaults.\n');
         } else {

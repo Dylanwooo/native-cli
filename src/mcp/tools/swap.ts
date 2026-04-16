@@ -19,6 +19,7 @@ export function registerSwapTool(server: McpServer): void {
       chain: z.string().optional().describe('Chain name: ethereum, bsc, arbitrum, base'),
       slippage: z.number().optional().describe('Slippage tolerance in percent (e.g. 0.5)'),
     },
+    { destructiveHint: true },
     async ({ from, to, amount, address, chain, slippage }) => {
       try {
         const resolvedChain = resolveChain(chain);

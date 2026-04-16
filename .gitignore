@@ -2,3 +2,6 @@ node_modules/
 dist/
 .cache/
 *.tsbuildinfo
+.env
+.env.*
+.env.local
