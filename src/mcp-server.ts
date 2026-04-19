@@ -5,7 +5,7 @@ import { registerAllTools } from './mcp/register-tools.js';
 const server = new McpServer(
   {
     name: 'nativefi-mcp',
-    version: '0.4.0',
+    version: '0.4.1',
   },
   {
     instructions: [

@@ -1,6 +1,6 @@
 {
   "name": "nativefi-cli",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "CLI tool for the Native liquidity platform",
   "type": "module",
   "bin": {
