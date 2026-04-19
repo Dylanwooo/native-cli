@@ -9,6 +9,8 @@ nativefi-cli wraps the [Native](https://native.org) liquidity platform into a si
 
 Every command supports `--json` output with metadata, making the CLI equally useful as a building block for automated trading agents and scripts.
 
+> **Contributors and AI agents:** read [ARCHITECTURE.md](./ARCHITECTURE.md) before editing code. It documents the codemap, invariants, and how to add new commands/tools.
+
 ---
 
 ## Quick Start
