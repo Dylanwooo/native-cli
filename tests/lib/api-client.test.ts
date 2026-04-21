@@ -115,6 +115,19 @@ describe('api-client', () => {
   });
 
   describe('retry logic', () => {
+    // Fake only setTimeout so the retry backoff sleeps (500 + 1000 + 2000 ms
+    // with up to 50% jitter) don't burn real wall-clock time. Date.now() stays
+    // real so the rate-limiter's refill math keeps working. See issue
+    // uncovered by CI run 24703152127 where the 5s default testTimeout raced
+    // the 3.5-5.25s real-time retry budget.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('retries on 500 error and succeeds', async () => {
       let callCount = 0;
       const mockFetch = vi.fn().mockImplementation(async () => {
@@ -137,7 +150,9 @@ describe('api-client', () => {
       vi.stubGlobal('fetch', mockFetch);
 
       const { apiRequest } = await import('../../src/lib/api-client.js');
-      const result = await apiRequest('test', {});
+      const resultPromise = apiRequest('test', {});
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
 
       expect(result.data).toEqual({ result: 'success' });
       expect(result._meta.retries).toBe(1);
@@ -156,7 +171,13 @@ describe('api-client', () => {
       const { apiRequest } = await import('../../src/lib/api-client.js');
       const { NativeApiError } = await import('../../src/lib/errors.js');
 
-      await expect(apiRequest('test', {})).rejects.toThrow(NativeApiError);
+      // Non-retryable: no setTimeout ever scheduled, so runAllTimersAsync
+      // is a no-op but kept for symmetry with sibling tests. Attach the
+      // rejection assertion before runAllTimersAsync so the rejection is
+      // observed and never surfaces as unhandled.
+      const assertion = expect(apiRequest('test', {})).rejects.toThrow(NativeApiError);
+      await vi.runAllTimersAsync();
+      await assertion;
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
@@ -182,7 +203,9 @@ describe('api-client', () => {
       vi.stubGlobal('fetch', mockFetch);
 
       const { apiRequest } = await import('../../src/lib/api-client.js');
-      const result = await apiRequest('test', {});
+      const resultPromise = apiRequest('test', {});
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
 
       expect(result.data).toEqual({ result: 'ok' });
       expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(3);
@@ -200,7 +223,9 @@ describe('api-client', () => {
       const { apiRequest } = await import('../../src/lib/api-client.js');
       const { NativeApiError } = await import('../../src/lib/errors.js');
 
-      await expect(apiRequest('test', {})).rejects.toThrow(NativeApiError);
+      const assertion = expect(apiRequest('test', {})).rejects.toThrow(NativeApiError);
+      await vi.runAllTimersAsync();
+      await assertion;
       // MAX_RETRIES is 3, so 4 total attempts
       expect(mockFetch).toHaveBeenCalledTimes(4);
     });
@@ -293,6 +318,14 @@ describe('api-client', () => {
   });
 
   describe('network errors', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('throws after all retries on network failure', async () => {
       const mockFetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
       vi.stubGlobal('fetch', mockFetch);
@@ -300,7 +333,9 @@ describe('api-client', () => {
       const { apiRequest } = await import('../../src/lib/api-client.js');
       const { NativeCliError } = await import('../../src/lib/errors.js');
 
-      await expect(apiRequest('test', {})).rejects.toThrow(NativeCliError);
+      const assertion = expect(apiRequest('test', {})).rejects.toThrow(NativeCliError);
+      await vi.runAllTimersAsync();
+      await assertion;
       // 1 initial + MAX_RETRIES retries
       expect(mockFetch.mock.calls.length).toBeGreaterThanOrEqual(4);
     });
