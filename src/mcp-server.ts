@@ -1,11 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerAllTools } from './mcp/register-tools.js';
+import { VERSION } from './lib/version.js';
 
 const server = new McpServer(
   {
     name: 'nativefi-mcp',
-    version: '0.4.1',
+    version: VERSION,
   },
   {
     instructions: [

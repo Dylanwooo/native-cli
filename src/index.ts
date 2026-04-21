@@ -5,6 +5,7 @@ import { registerSwapCommand } from './commands/swap.js';
 import { registerTokensCommand } from './commands/tokens.js';
 import { registerBridgeCommand } from './commands/bridge.js';
 import { registerConfigCommand } from './commands/config.js';
+import { VERSION } from './lib/version.js';
 
 export function main(): void {
   const program = new Command();
@@ -12,7 +13,7 @@ export function main(): void {
   program
     .name('native')
     .description('CLI tool for the Native liquidity platform')
-    .version('0.4.1')
+    .version(VERSION)
     .option('--json', 'Output as JSON')
     .option('--no-color', 'Disable colored output')
     .option('--skip-cache', 'Skip cache for this request')
